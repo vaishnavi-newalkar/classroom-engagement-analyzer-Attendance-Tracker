@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+vocv/
+
+# Outputs
+outputs/
+ENGAGEMENT_ANALYSIS-main/outputs/
+
+# Models
+models/
+ENGAGEMENT_ANALYSIS-main/models/
+ENGAGEMENT_ANALYSIS-main/src/models/
+
+# Media
+*.mp4
+samples/

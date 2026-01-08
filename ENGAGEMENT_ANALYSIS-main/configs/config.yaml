@@ -1,0 +1,15 @@
+video:
+  frame_width: 480
+  frame_height: 360
+  max_faces: 5
+
+models:
+  yolo_pose_interval: 1.0
+  phone_detection_interval: 1.0
+
+logging:
+  aggregation_interval_sec: 10
+
+api:
+  server_base_url: "http://localhost:8000"
+  engagement_api_url: "http://127.0.0.1:5001/api/engagement"
