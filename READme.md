@@ -1,236 +1,235 @@
-# 🎓 Classroom Engagement Analyzer
+# 📊 Classroom Engagement Analyzer & Attendance Tracker
 
-Real-time classroom engagement analysis using **Computer Vision**, combining **MediaPipe FaceMesh**, **YOLOv8 Pose Estimation**, and **Object Detection** to infer student attention, distraction, and fatigue with confidence scoring.
-
-> 🚀 Built as part of Smart India Hackathon (SIH) project evolution and productionized for deployment and portfolio use.
-
----
-
-## ✨ Key Features
-
-✅ Real-time face landmark detection (MediaPipe FaceMesh)
-✅ Body posture analysis using YOLOv8 Pose
-✅ Phone distraction detection using YOLOv8 Object Detection
-✅ Multi-signal engagement classification
-✅ Temporal smoothing for stable predictions
-✅ Confidence score for each prediction
-✅ Aggregated classroom analytics (JSON output)
-✅ Config-driven deployment (no hardcoded parameters)
-✅ Edge-friendly and privacy-conscious (no face storage)
+An **AI-powered classroom monitoring system** that analyzes **student engagement, behavior, and attendance** in real time using **computer vision and deep learning**.
+The system integrates **face recognition, pose estimation, phone detection, and engagement classification** to generate actionable classroom analytics.
 
 ---
 
-## 🧠 Engagement Signals Used
+## 🚀 Features
 
-The system fuses multiple behavioral cues:
+### 🎯 Engagement Analysis
 
-| Signal              | Description                            |
-| ------------------- | -------------------------------------- |
-| 👁 Eye Aspect Ratio | Detects eye closure, drowsiness, sleep |
-| 👄 Mouth Ratio      | Detects yawning / fatigue              |
-| 🧭 Head Roll Angle  | Detects sideways distraction           |
-| 🧍 Body Pose        | Head-down posture, slouching, leaning  |
-| 📱 Phone Detection  | Detects mobile phone near student      |
-| ⏱ Temporal Tracking | Persistent states over time            |
-| 📊 Confidence Score | Reliability of prediction              |
+* Real-time **Active / Inactive classification**
+* Detects:
+
+  * 💤 Sleeping
+  * 📱 Phone usage (suspected)
+  * 😴 Drowsiness / Yawning
+  * ⬇️ Head-down behavior
+* Confidence-weighted engagement scoring
+
+### 🧑‍🎓 Attendance Tracking
+
+* Face recognition–based **student identity**
+* Automatic **attendance marking**
+* Per-student engagement statistics over time
+
+### 🧍 Posture & Behavior Detection
+
+* YOLOv8 **pose estimation**
+* Detects:
+
+  * Head-down posture
+  * Slumped posture
+  * Hands near lap
+* Links pose data to individual students
+
+### 📈 Analytics & Reporting
+
+* Class-level engagement percentages
+* Per-student engagement summaries
+* JSON-based analytics output
+* Optional **API integration** for backend dashboards
+
+### 🎥 Flexible Input Modes
+
+* Live webcam
+* RTSP / IP camera streams
+* Offline recorded video files
 
 ---
 
-## 🏷 Engagement Labels
+## 🧠 Tech Stack
 
-The model classifies each student into:
-
-* `ATTENTIVE`
-* `FOCUSED`
-* `INACTIVE`
-* `DROWSY`
-* `SLEEPING`
-* `HEAD_DOWN`
-* `PHONE_DISTRACTED`
-* `BORED`
-* `DISTRACTED`
-
-Active labels:
-
-* `ATTENTIVE`
-* `FOCUSED`
-
----
-
-## 🏗 System Architecture
-
-```
-Camera / Video Stream
-        │
-        ▼
-FaceMesh (Eyes, Mouth, Head Pose)
-        │
-YOLOv8 Pose (Body Posture)
-        │
-YOLO Object Detection (Phone)
-        │
-Feature Fusion + Temporal Smoothing
-        │
-Rule-based Engagement Classifier
-        │
-Confidence Scoring
-        │
-JSON Analytics Output + Visualization
-```
+| Component         | Technology               |
+| ----------------- | ------------------------ |
+| Language          | Python                   |
+| Face Analysis     | MediaPipe FaceMesh       |
+| Object Detection  | YOLOv8 (Ultralytics)     |
+| Pose Estimation   | YOLOv8 Pose              |
+| Face Recognition  | ArcFace-based recognizer |
+| Vision            | OpenCV                   |
+| ML Framework      | PyTorch                  |
+| API Communication | REST (requests)          |
+| Data Output       | JSON                     |
 
 ---
 
 ## 📂 Project Structure
 
 ```
-classroom-engagement-analyzer/
+ENGAGEMENT_ANALYSIS/
 │
 ├── src/
-│   ├── main.py
-│   ├── engagement_logic.py
-│   ├── face_utils.py
-│   ├── pose_utils.py
+│   ├── main.py                  # Main execution pipeline
+│   ├── engagement_logic.py      # Engagement classification logic
+│   ├── face_utils.py            # Eye, mouth, head angle utilities
+│   ├── pose_utils.py            # YOLO pose feature extraction
+│
+├── face_identity/
+│   └── face_recognizer.py       # Student face recognition
+│
+├── attendance/
+│   └── attendance_tracker.py    # Attendance management
+│
+├── analytics/
+│   └── student_metrics.py       # Per-student engagement analytics
 │
 ├── configs/
-│   └── config.yaml
+│   └── config.yaml              # System configuration
 │
-├── models/              (ignored in git)
+├── models/
+│   ├── yolov8n.pt
+│   └── yolov8n-pose.pt
 │
-├── outputs/             (ignored in git)
+├── outputs/
+│   ├── engagement_<class_id>.json
+│   └── student_engagement_summary.json
 │
-├── samples/
-│   └── demo.mp4
-│
-├── requirements.txt
-├── .gitignore
-└── README.md
+└── requirements.txt
 ```
-
-> ⚠️ Model weights and output files are excluded from GitHub using `.gitignore`.
 
 ---
 
 ## ⚙️ Installation
 
-### 1️⃣ Clone Repository
+### 1️⃣ Clone the repository
 
 ```bash
-git clone https://github.com/GitNinja11/classroom-engagement-analyzer.git
-cd classroom-engagement-analyzer
+git clone https://github.com/USERNAME/REPO_NAME.git
+cd REPO_NAME
 ```
 
----
-
-### 2️⃣ Create Virtual Environment (Recommended)
+### 2️⃣ Create virtual environment (recommended)
 
 ```bash
 python -m venv venv
-venv\Scripts\activate     # Windows
+source venv/bin/activate   # Linux / Mac
+venv\Scripts\activate      # Windows
 ```
 
----
-
-### 3️⃣ Install Dependencies
+### 3️⃣ Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+### 4️⃣ Download models
 
-### 4️⃣ Download YOLO Models
-
-Place these files inside the `models/` folder:
+Place YOLO models inside the `models/` folder:
 
 * `yolov8n.pt`
 * `yolov8n-pose.pt`
 
-Download from: [https://github.com/ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
-
 ---
 
----
+## ▶️ Usage
 
-## ▶️ Running the Application
-
-### ▶ Live Camera Mode
+### 🔴 Live Webcam Mode
 
 ```bash
-python src/main.py
+python src/main.py --mode live
 ```
 
----
-
-### ▶ Recording Mode
+### 📡 Live RTSP / IP Camera
 
 ```bash
-python src/main.py --mode recording --video_file samples/demo.mp4
+python src/main.py --mode live --camera_source rtsp://<camera_url>
 ```
 
----
-
-### ▶ Using Custom Config
+### 🧠 Server-Based Camera Fetch
 
 ```bash
-python src/main.py --config configs/config.yaml
+python src/main.py --use_server --classroom_id CSE_A1
+```
+
+### 🎥 Offline Video Analysis
+
+```bash
+python src/main.py --mode recording --video_file path/to/video.mp4
 ```
 
 ---
 
----
+## 📤 Output
 
-## 📊 Output
+### 📁 Class-Level Engagement
 
-Engagement analytics are stored as JSON in:
+Saved as:
 
 ```
-outputs/
+outputs/engagement_<class_unique_id>.json
 ```
 
-Example fields:
+Contains:
 
-```json
-{
-  "timestamp": "2026-01-08 20:15:10",
-  "total_students": 1.0,
-  "active_pct": 100.0,
-  "inactive_pct": 0.0,
-  "sleeping_pct": 0.0,
-  "drowsy_pct": 0.0,
-  "avg_confidence": 0.87
-}
+* Active / inactive percentages
+* Sleeping, drowsy, head-down stats
+* Timestamped analytics
+
+### 📁 Student-Level Summary
+
+```
+outputs/student_engagement_summary.json
+```
+
+Contains:
+
+* Attendance status
+* Engagement breakdown per student
+
+---
+
+## 🔗 API Integration (Optional)
+
+The system can push engagement analytics to a backend service:
+
+Configured in:
+
+```yaml
+configs/config.yaml
+```
+
+```yaml
+api:
+  server_base_url: http://localhost:8000
+  engagement_api_url: http://localhost:8000/api/engagement
 ```
 
 ---
 
----
+## 🧪 Performance Notes
 
-## 🎥 Demo
-
-📌 Demo video: *(Add your Drive / YouTube link here)*
-📌 Screenshots available in `/samples`
-
----
+* GPU acceleration supported (CUDA)
+* YOLO inference optimized via frame intervals
+* Smoothing applied for stable predictions
 
 ---
 
-## 🛠 Tech Stack
+## 🏫 Use Cases
 
-* **Python**
-* **OpenCV**
-* **MediaPipe**
-* **YOLOv8 (Ultralytics)**
-* **NumPy**
-* **PyYAML**
-* **Computer Vision**
-* **Real-Time Inference**
+* Smart classrooms
+* Online & hybrid learning monitoring
+* Academic research on student engagement
+* Attendance automation systems
 
 ---
 
-## 👨‍💻 Author
+## 🔮 Future Enhancements
 
-**Vaishnavi Newalkar**
-B.Tech ECE (IoT) — IIIT Nagpur
-GitHub: [https://github.com/GitNinja11](https://github.com/GitNinja11)
-
+* Emotion recognition
+* Dashboard visualization
+* Multi-classroom aggregation
+* Cloud deployment
+* Real-time alerts
 
