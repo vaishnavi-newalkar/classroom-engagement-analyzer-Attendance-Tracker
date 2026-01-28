@@ -1,12 +1,19 @@
+import sys
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
 import yaml
 import argparse
 import requests
 import json
-import os
 import time
 from datetime import datetime
 from typing import Optional
-
+import torch
+import logging
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -15,6 +22,21 @@ from ultralytics import YOLO
 from face_utils import eye_aspect_ratio, mouth_open_ratio, head_roll_angle
 from pose_utils import extract_yolo_pose_features
 from engagement_logic import classify_engagement, is_active_label
+from face_identity.face_recognizer import FaceRecognizer
+from attendance.attendance_tracker import AttendanceTracker
+from analytics.student_metrics import StudentMetrics
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print("Using device:", DEVICE)
+
+
+# =========================
+# LOGGING
+# =========================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
 # =========================
 # CONFIG
@@ -24,6 +46,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "configs", "config.yaml")
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
 MODEL_DIR = os.path.join(BASE_DIR, "models")
+
 with open(CONFIG_PATH, "r") as f:
     cfg = yaml.safe_load(f)
 
@@ -39,32 +62,40 @@ LOG_INTERVAL_SEC = cfg["logging"]["aggregation_interval_sec"]
 SERVER_BASE_URL = cfg["api"]["server_base_url"]
 ENGAGEMENT_API_URL = cfg["api"]["engagement_api_url"]
 
+CAMERA_SOURCE = None
+CLASS_UNIQUE_ID = None
+CAMERA_IP = None
+
+# =========================
+# LOAD MODELS (ONCE)
+# =========================
+logging.info("Loading YOLO models...")
+
+pose_model = YOLO(os.path.join(MODEL_DIR, "yolov8n-pose.pt")).to(DEVICE)
+phone_model = YOLO(os.path.join(MODEL_DIR, "yolov8n.pt")).to(DEVICE)
 
 
-CAMERA_SOURCE: object = None
+logging.info("Loading Face Recognizer...")
+face_recognizer = FaceRecognizer()   # 🔴 THIS WAS MISSING
 
+attendance_tracker = AttendanceTracker()
+student_metrics = StudentMetrics()
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-MODEL_DIR = os.path.join(BASE_DIR, "models")
-
-pose_model = YOLO(os.path.join(MODEL_DIR, "yolov8n-pose.pt"))
-phone_model = YOLO(os.path.join(MODEL_DIR, "yolov8n.pt"))   # or your custom phone model
-
-
-
-# Try to automatically find the 'phone' / 'cell phone' class id from model.names
+# =========================
+# PHONE CLASS
+# =========================
 PHONE_CLASS_ID = None
 for cid, name in phone_model.names.items():
     if "phone" in name.lower():
         PHONE_CLASS_ID = cid
-        print(f"[INIT] Phone class id = {PHONE_CLASS_ID} (name='{name}')")
+        logging.info(f"Phone class id = {PHONE_CLASS_ID} ({name})")
         break
 
 if PHONE_CLASS_ID is None:
-    PHONE_CLASS_ID = 67  # fallback
-    print("[WARN] Could not find 'phone' class in model.names, using 67 as fallback.")
+    PHONE_CLASS_ID = 67
+    logging.warning("Phone class not found, using fallback 67")
 
-PHONE_IOU_THRESH = 0.05          # more forgiving IoU threshold
+PHONE_IOU_THRESH = 0.05
 
 
 CLASS_UNIQUE_ID: str | None = None
@@ -250,6 +281,13 @@ def main():
     # -----------------------
     engagement_records = []
 
+    # =========================
+    # Per-student identity + analytics
+    # =========================
+    face_recognizer = FaceRecognizer()
+    attendance_tracker = AttendanceTracker()
+    student_metrics = StudentMetrics()
+
     # Frame smoothing vars
     # Frame smoothing vars
     closed_eye_frames = [0] * MAX_FACES
@@ -318,8 +356,15 @@ def main():
 
             # This resized frame is used for FaceMesh + pose
             frame = cv2.resize(raw_frame, (FRAME_W, FRAME_H))
+
             h, w, _ = frame.shape
             now = time.time()
+
+            # -----------------------
+            # Face recognition (ONCE per frame)
+            # -----------------------
+            recognized_faces = face_recognizer.detect_and_identify(frame)
+
 
             # -----------------------
             # YOLO pose (1 FPS)
@@ -468,7 +513,48 @@ def main():
                     ys = [p[1] for p in pts]
                     x_min, x_max = int(min(xs)), int(max(xs))
                     y_min, y_max = int(min(ys)), int(max(ys))
+
+ 
+
                     cx, cy = (x_min + x_max)/2, (y_min + y_max)/2
+                    # Safe face ROI extraction
+                    x1 = max(0, x_min)
+                    y1 = max(0, y_min)
+                    x2 = min(w, x_max)
+                    y2 = min(h, y_max)
+
+                    # ---- PAD FACE ROI FOR ARCFACE ----
+                    pad_x = int(0.25 * (x2 - x1))
+                    pad_y = int(0.25 * (y2 - y1))
+
+                    px1 = max(0, x1 - pad_x)
+                    py1 = max(0, y1 - pad_y)
+                    px2 = min(w, x2 + pad_x)
+                    py2 = min(h, y2 + pad_y)
+                    
+
+                    print("Recognized:", [(r["id"], r["bbox"]) for r in recognized_faces])
+
+                    # -----------------------
+                    # Attach identity using IoU
+                    # -----------------------
+                    student_id = "unknown"
+
+                    face_bbox = [px1, py1, px2, py2]
+
+
+                    for rf in recognized_faces:
+                        rx1, ry1, rx2, ry2 = rf["bbox"]
+                        rec_bbox = [rx1, ry1, rx2, ry2]
+
+                        iou = box_iou(face_bbox, rec_bbox)
+
+                        if iou > 0.25:   # key threshold
+                            student_id = rf["id"]
+                            print("[FACE-ID]", student_id)
+                            break
+
+
 
                     # Match to YOLO person
                     matched_pose = None
@@ -518,6 +604,9 @@ def main():
                         head_down_frames[i] += 1
                     else:
                         head_down_frames[i] = 0
+     
+
+
 
                     # final engagement label
                                        # final engagement label
@@ -530,6 +619,13 @@ def main():
                         fps=15.0,
                         head_down_frames=head_down_frames[i],
                     )
+
+                    # Attendance + per-student engagement tracking
+                    if student_id != "unknown":
+                        attendance_tracker.mark(student_id)
+                        student_metrics.update(student_id, label, confidence)
+
+
 
                     total_faces += 1
                     if is_active_label(label):
@@ -571,8 +667,10 @@ def main():
                         None, mp_styles.get_default_face_mesh_contours_style(),
                     )
                     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255,0,0), 1)
-                    cv2.putText(frame, label, (x_min, y_min-10),
+                    display_text = f"{student_id} | {label}"
+                    cv2.putText(frame, display_text, (x_min, y_min-10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 2)
+
 
             # -----------------------
             # Draw YOLO body box + dynamic pose label
@@ -737,6 +835,18 @@ def main():
         print(f"💾 Saved engagement JSON → {json_filename}")
     except Exception as e:
         print(f"❌ Error saving JSON: {e}")
+
+    # ========================
+    # Save per-student engagement summary
+    # ========================
+    student_summary = student_metrics.summary()
+
+    summary_path = os.path.join("outputs", "student_engagement_summary.json")
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(student_summary, f, indent=2)
+
+    print(f"💾 Saved per-student summary → {summary_path}")
+
 
     cap.release()
     cv2.destroyAllWindows()

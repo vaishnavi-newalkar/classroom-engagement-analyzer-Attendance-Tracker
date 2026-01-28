@@ -70,9 +70,16 @@ def classify_engagement(
     if head_down and head_down_frames >= HEAD_DOWN_LONG_FRAMES:
         return LABEL_HEAD_DOWN, 0.85
 
+    # Eyes open + head up → attentive (override posture)
+    if ear >= EAR_DROWSY and not head_down:
+        return LABEL_ATTENTIVE, 0.85
+
+
     # 3) Short-term head down / phone (generic inattentive)
-    if (head_down or hands_lap) and ear >= EAR_SLEEP:
+    # Hands alone should NOT mark inactive
+    if head_down and ear >= EAR_SLEEP:
         return LABEL_INACTIVE, 0.75
+
 
     # 4) Slumped posture (bored)
     if slumped:

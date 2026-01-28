@@ -1,7 +1,26 @@
-opencv-python
+# Core numeric stack (PINNED for compatibility)
+numpy==1.26.4
+scipy>=1.10.0
+
+# Computer Vision
+opencv-python==4.9.0.80
 mediapipe==0.10.18
-ultralytics
-numpy
+
+# YOLOv8
+ultralytics==8.1.34
+
+# Face Recognition (InsightFace)
+insightface==0.7.3
+onnxruntime==1.17.1
+
+# Vector Search
+faiss-cpu==1.7.4
+
+# Backend / Utils
 flask
 requests
+pyyaml
+tqdm
+
+# Dev / Notebook
 ipykernel
